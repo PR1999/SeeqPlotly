@@ -15,6 +15,7 @@ function devlog(data) {
 document.addEventListener("DOMContentLoaded", function() {
     let plugin = new seeqPlugin();
     registerHandlers(plugin);
+    setQuotes(); //TODO remove
     initPlotlyPlot(PLOT_AREA_ELEM);
 
 });
@@ -123,4 +124,40 @@ function initPlotlyPlot(elementId) {
         autosize: true
     };
     Plotly.newPlot(elementId, data, layout, { scrollZoom: true, responsive: true, modeBarButtonsToRemove: ['toImage', 'select2d', 'lasso2d'], displaylogo: false });
+}
+
+function QOTD() {
+
+    let QOTD = [
+        'Before you ask more questions, think about whether you really want to know the answers.',
+        'Do not believe in miracles -- rely on them.',
+        'For fast acting relief, try slowing down.',
+        'Nothing is as simple as it seems at first, or as hopeless as it seems in the middle, or as finished as it seems in the end.',
+        'Ninety percent of everything is crap.',
+        'The chief cause of problems is solutions.',
+        'There are two reasons for doing anything; a good reason, and the real reason.',
+        "Be incomprehensible. If they can't understand, they can't disagree.",
+        'If you want divine justice, die.',
+        'If you find a solution and become attached to it, the solution may become your next problem.',
+        'It is not doing the thing we like to do, but liking the thing we have to do, that makes life blessed.',
+        "Seeing is believing. You wouldn't have seen it if you hadn't believed it.",
+        'All I ask of life is a constant and exaggerated sense of my own importance. ',
+        "Apathy Club meeting this friday. If you want to come, you're not invited.",
+        'Chairman of the Bored',
+        'I\'d rather just believe that its done by little eleves running around..',
+        'When you dont know what you are doing, do it neatly.',
+        'Ignorance is when you dont know anything and somebody finds out.',
+        'Do not try to solve all life\'s problems at once --- learn to dread each day as it comes.',
+        'Do not believe everything you hear or anything you say.',
+        'The average nutritional value of promises is roughly zero.'
+    ];
+
+    let i = Math.floor(Math.random()* QOTD.length)
+    let quote = QOTD[i]
+    return quote
+}
+
+function setQuotes() {
+    let list = document.getElementById('notices')
+    list.innerHTML = `<li>${QOTD()}</li><li>${QOTD()}</li><li>${QOTD()}</li>`
 }
