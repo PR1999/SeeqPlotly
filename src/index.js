@@ -1,10 +1,14 @@
 import Plotly from 'plotly.js-dist-min'
-//import {Component, Mediator} from './components.js'
+import { Component, Mediator } from './components.js'
+import { PlotlyPlot } from './plot.js';
 
 
 let seeq;
 let PLOT_AREA_ELEM = 'plotarea'
 let debugmode = true;
+let MEDIATOR;
+
+devlog(QOTD())
 
 function devlog(data) {
     if (debugmode) {
@@ -12,11 +16,18 @@ function devlog(data) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     let plugin = new seeqPlugin();
+    MEDIATOR = new Mediator();
+    MEDIATOR.register(plugin);
     registerHandlers(plugin);
-    setQuotes(); //TODO remove
-    initPlotlyPlot(PLOT_AREA_ELEM);
+    let container = document.getElementById("firstcontainer")
+    let height = container.clientHeight;
+    let plotHeight = height*0.8
+    let width = container.clientWidth;
+    let plotWidth = width*0.8;
+    let plot = new PlotlyPlot(PLOT_AREA_ELEM, {height : plotHeight, width: plotWidth});
+    MEDIATOR.register(plot);
 
 });
 
@@ -28,7 +39,8 @@ function registerHandlers(plugin) {
 }
 
 
-class seeqPlugin{
+class seeqPlugin extends Component {
+    componentType = 'sqPlugin';
     initPromises = [];
     pluginInfo;
     seeq;
@@ -38,19 +50,17 @@ class seeqPlugin{
     signals = [];
 
     constructor() {
-
+        super()
     }
 
     syncSignals(newsignals) {
-        devlog('syncSignals');
-        let oldS = this.signals.map(s => [s.id, s.lastFetchRequest])
-        let newS = newsignals.map(s=> [s.id, s.lastFetchRequest])
         if (newsignals.toString() === this.signals.toString()) {
             return
         }
         this.signals = newsignals;
+        this.mediator.notify({ type: 'SYNC_SIGNALS', value: this.signals });
         this.signals.forEach(s => {
-            if ((s.dataStatus !== 'itemDataLoading') && ( s.dataStatus !== 'itemDataPresent')) {
+            if ((s.dataStatus !== 'itemDataLoading') && (s.dataStatus !== 'itemDataPresent')) {
                 devlog(`Loading: ${s.name} - ${s.dataStatus} - ${s.lastFetchRequest}`)
                 this.loadSignal(s)
             } else {
@@ -60,7 +70,7 @@ class seeqPlugin{
     }
 
     async loadSignal(signal) {
-        if (this.displayrange===undefined) {
+        if (this.displayrange === undefined) {
             return
         }
         let startDate = new Date(this.displayrange.start)
@@ -68,35 +78,43 @@ class seeqPlugin{
         let endDate = new Date(this.displayrange.end)
         endDate = endDate.toISOString();
         let p = {
-                start : startDate,
-                end : endDate,
-                formula : '$series',
-                parameters : {series : signal.id},
-                cancellationGroup : `cg${signal.id}`,
-                limit : 100000
+            start: startDate,
+            end: endDate,
+            formula: '$series',
+            parameters: { series: signal.id },
+            cancellationGroup: `cg${signal.id}`,
+            limit: 100000
         }
         try {
             this.seeq.setTrendDataStatusLoading(signal.id);
             let results = await this.seeq.runFormula(p)
-            
+
             this.seeq.setTrendDataStatusSuccess({
-              id: signal.id,
-              samples: results.data.samples.samples,
-              timingInformation: results.info.timingInformation,
-              meterInformation: results.info.meterInformation,
-              valueUnitOfMeasure: signal.valueUnitOfMeasure,
-              warningCount: results.data.warningCount,
-              warningLogs: results.data.warningLogs
+                id: signal.id,
+                samples: results.data.samples.samples,
+                timingInformation: results.info.timingInformation,
+                meterInformation: results.info.meterInformation,
+                valueUnitOfMeasure: signal.valueUnitOfMeasure,
+                warningCount: results.data.warningCount,
+                warningLogs: results.data.warningLogs
             });
             devlog(`Loaded: ${signal.name} - ${signal.dataStatus} - ${signal.lastFetchRequest} - ${results.data?.samples?.samples?.length} samples`)
+            this.mediator.notify({ type: 'SIGNAL_DATA_UPDATE', value: { signal: signal, results: results } })
             return results
         } catch (error) {
-            this.seeq.catchItemDataFailure(signal.id, `cg${signal.id}`, error.message )
+            this.seeq.catchItemDataFailure(signal.id, `cg${signal.id}`, error.message)
         }
     }
 
-    async formulaData(params, continuationToken=null) {
-        if (continuationToken!==null) {
+    reloadSignals() {
+        this.signals.forEach(s => {
+            devlog(`Loading: ${s.name} - ${s.dataStatus} - ${s.lastFetchRequest}`)
+            this.loadSignal(s)
+        });
+    }
+
+    async formulaData(params, continuationToken = null) {
+        if (continuationToken !== null) {
             p['continuationToken'] = continuationToken;
         }
         let res = await this.seeq.runFormula(p)
@@ -113,8 +131,8 @@ class seeqPlugin{
         if (this.displayrange === newdisplayrange) {
             return
         }
-        
         this.displayrange = newdisplayrange;
+        this.reloadSignals()
     }
 
     registerSeeq() {
@@ -149,16 +167,7 @@ class seeqPlugin{
     }
 }
 
-function initPlotlyPlot(elementId) {
-    let data = [];
-    let layout = {
-        showlegend: false,
-        width: 600,
-        height: 400,
-        autosize: true
-    };
-    Plotly.newPlot(elementId, data, layout, { scrollZoom: true, responsive: true, modeBarButtonsToRemove: ['toImage', 'select2d', 'lasso2d'], displaylogo: false });
-}
+
 
 
 function QOTD() {
@@ -187,12 +196,7 @@ function QOTD() {
         'The average nutritional value of promises is roughly zero.'
     ];
 
-    let i = Math.floor(Math.random()* QOTD.length)
-    let quote = QOTD[i]
+    let i = Math.floor(Math.random() * QOTD.length)
+    let quote = `Today's fortune reads ... '${QOTD[i]}'`
     return quote
-}
-
-function setQuotes() {
-    let list = document.getElementById('notices')
-    list.innerHTML = `<li>${QOTD()}</li><li>${QOTD()}</li><li>${QOTD()}</li>`
 }
