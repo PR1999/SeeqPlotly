@@ -1,5 +1,5 @@
-
 import Plotly from 'plotly.js-dist-min'
+//import {Component, Mediator} from './components.js'
 
 
 let seeq;
@@ -28,23 +28,34 @@ function registerHandlers(plugin) {
 }
 
 
-class seeqPlugin {
+class seeqPlugin{
     initPromises = [];
     pluginInfo;
     seeq;
     workbook;
     worksheet;
     displayrange;
+    signals = [];
 
     constructor() {
 
     }
-    syncSignals(signals) {
+
+    syncSignals(newsignals) {
         devlog('syncSignals');
-        devlog(signals);
-        signals.forEach(s => {
-            this.seeq.setTrendDataStatusLoading(s.id);
-            this.loadSignal(s)
+        let oldS = this.signals.map(s => [s.id, s.lastFetchRequest])
+        let newS = newsignals.map(s=> [s.id, s.lastFetchRequest])
+        if (newsignals.toString() === this.signals.toString()) {
+            return
+        }
+        this.signals = newsignals;
+        this.signals.forEach(s => {
+            if ((s.dataStatus !== 'itemDataLoading') && ( s.dataStatus !== 'itemDataPresent')) {
+                devlog(`Loading: ${s.name} - ${s.dataStatus} - ${s.lastFetchRequest}`)
+                this.loadSignal(s)
+            } else {
+                devlog(`Skipping: ${s.name} - ${s.dataStatus} - ${s.lastFetchRequest}`)
+            }
         });
     }
 
@@ -61,17 +72,35 @@ class seeqPlugin {
                 end : endDate,
                 formula : '$series',
                 parameters : {series : signal.id},
-                cancellationGroup : `cg${signal.id}`
+                cancellationGroup : `cg${signal.id}`,
+                limit : 100000
         }
         try {
+            this.seeq.setTrendDataStatusLoading(signal.id);
             let results = await this.seeq.runFormula(p)
-            devlog(results)
+            
+            this.seeq.setTrendDataStatusSuccess({
+              id: signal.id,
+              samples: results.data.samples.samples,
+              timingInformation: results.info.timingInformation,
+              meterInformation: results.info.meterInformation,
+              valueUnitOfMeasure: signal.valueUnitOfMeasure,
+              warningCount: results.data.warningCount,
+              warningLogs: results.data.warningLogs
+            });
+            devlog(`Loaded: ${signal.name} - ${signal.dataStatus} - ${signal.lastFetchRequest} - ${results.data?.samples?.samples?.length} samples`)
             return results
-
         } catch (error) {
-            this.seeq.catchItemDataFailure(signal.id, `cg${signal.id}`, error )
+            this.seeq.catchItemDataFailure(signal.id, `cg${signal.id}`, error.message )
         }
+    }
 
+    async formulaData(params, continuationToken=null) {
+        if (continuationToken!==null) {
+            p['continuationToken'] = continuationToken;
+        }
+        let res = await this.seeq.runFormula(p)
+        return res
     }
 
     syncConditions(conditions) {
@@ -81,6 +110,10 @@ class seeqPlugin {
 
     syncDisplayRange(newdisplayrange) {
         devlog(newdisplayrange);
+        if (this.displayrange === newdisplayrange) {
+            return
+        }
+        
         this.displayrange = newdisplayrange;
     }
 
@@ -100,9 +133,10 @@ class seeqPlugin {
 
     registerToPlugin() {
         devlog('Registering Plugin Handlers ');
+        this.seeq.subscribeToDisplayRange(this.init(displayrange => this.syncDisplayRange(displayrange)));
         this.seeq.subscribeToSignals(this.init(signals => this.syncSignals(signals)));
         this.seeq.subscribeToConditions(this.init(conditions => this.syncConditions(conditions)));
-        this.seeq.subscribeToDisplayRange(this.init(displayrange => this.syncDisplayRange(displayrange)));
+        Promise.all(this.initPromises).then(() => this.seeq.pluginRenderComplete());
     }
 
     init(func) {
@@ -125,6 +159,7 @@ function initPlotlyPlot(elementId) {
     };
     Plotly.newPlot(elementId, data, layout, { scrollZoom: true, responsive: true, modeBarButtonsToRemove: ['toImage', 'select2d', 'lasso2d'], displaylogo: false });
 }
+
 
 function QOTD() {
 

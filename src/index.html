@@ -1,7 +1,23 @@
-<h1 style="margin-top: 50px">Notice</h1>
-<ul id="notices">
-    <li>Apathy Club meeting this friday. If you want to come, you're not invited.</li>
-</ul>
-<script src="/api/plugins/sdk/seeq.js"></script>
-<script src="bundle.js"></script>
-<div id="plotarea"></div>
+<head>
+    <link href="./style.css" rel="stylesheet">
+    <script src="/api/plugins/sdk/seeq.js"></script>
+    <script src="bundle.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1 style="margin-top: 50px">Notice</h1>
+    </header>
+    <div class="container">
+        <div class="layoutrow">
+            <div class="area">
+                <ul id="notices">
+                    <li>Apathy Club meeting this friday. If you want to come, you're not invited.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="layoutrow">
+            <div id="plotarea" class="area"></div>
+        </div>
+    </div>
+</body>
