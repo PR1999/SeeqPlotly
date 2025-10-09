@@ -2,10 +2,37 @@
     <link href="./style.css" rel="stylesheet">
     <script src="/api/plugins/sdk/seeq.js"></script>
     <script src="bundle.js"></script>
+    <style>
+        #toolbar {
+            margin-left: 80px;
+            min-height: 2.875rem;
+            border-bottom: 2px solid rgb(204, 204, 204);
+            display: flex;
+            flex-direction: row;
+        }
+        button {
+            margin: 3px 3px;
+            font-size: 0.6rem;
+            border: 0px;
+            border-radius: 5px;
+            min-height: fit-content;
+            width: 40px;
+            min-width: fit-content;
+
+        }
+        button > p {
+            margin:0px;
+        }
+        button > svg {
+            max-height: 20px;
+        }
+        button.active {
+            background-color: rgb(220, 220, 220);
+        }
+    </style>
 </head>
 <body>
-    <header>
-    </header>
+    <div id="toolbar"></div>
     <div class="container" id="firstcontainer">
             <div id="plotarea" class="area"></div>
     </div>

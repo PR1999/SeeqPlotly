@@ -20,6 +20,7 @@
     "chalk": "^5.6.2",
     "clean-webpack-plugin": "^4.0.0",
     "copy-webpack-plugin": "^13.0.1",
+    "css-loader": "^7.1.2",
     "formdata-node": "^6.0.3",
     "inquirer": "^12.9.6",
     "mkdirp": "^3.0.1",

@@ -47,4 +47,41 @@ class Component {
     }
 }
 
-export {Mediator, Component}
+class Button extends Component {
+    componentType = 'Button';
+    parentEl;
+    elementId;
+    eventIdentifier;
+    state = false;
+    constructor(name, elementId, parentEl, eventIdentifier, text = '', icon='' ) {
+        super();
+        this.name = name;
+        this.parentEl = parentEl;
+        this.elementId = elementId;
+        this.eventIdentifier = eventIdentifier
+        let btnEl = document.createElement('button')
+        btnEl.id = this.elementId;
+        btnEl.innerHTML = `${icon} <p>${text}</p>`;
+        btnEl.addEventListener('click', (e)=> this.handle_click(e));
+        let parent = document.getElementById(parentEl);
+        parent.appendChild(btnEl);
+    }
+
+    handle_click(){
+        this.state = !(this.state);
+        let btnEl = document.getElementById(this.elementId);
+        if (this.state) {
+            btnEl.classList.add('active');
+        } else {
+            btnEl.classList.remove('active')
+        }
+            
+        let myEvent = {
+            type: this.eventIdentifier,
+            value: this.state
+        }
+        this.mediator.notify(myEvent);
+    }
+}
+
+export {Mediator, Component, Button}

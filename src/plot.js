@@ -7,6 +7,8 @@ class PlotlyPlot extends Component {
     plotWidth = 600;
     plotHeight = 400;
     signalMap = new Map();
+    signalPropertiesMap = new Map();
+    dimmingEnabled = false;
     constructor(plotElemId, params = {}) {
         super();
         this.plotElemId = plotElemId;
@@ -38,13 +40,75 @@ class PlotlyPlot extends Component {
                 }
                 break;
             case 'SYNC_SIGNALS':
-                let active = e.value.map(s => s.id);
-                this.signalMap.forEach((t, k) => {
-                    if (!(active.includes(k))) {
-                        Plotly.deleteTraces(this.plotElemId, [t]).then(() => { this.signalMap.delete(k)})
-                    }
-                })
+                this.syncSignals(e.value)
+                break;
+            case 'DIM_BTN_CLICK':
+                this.dimmingEnabled = e.value;
+                if (!(this.dimmingEnabled)) {
+                    this.makeAllVisible()
+                } else {
+                    this.enableDimming()
+                }
+                break;
         }
+    }
+
+    syncSignals(signals) {
+        let active = signals.map(s => s.id);
+        this.signalMap.forEach((t, k) => {
+            if (!(active.includes(k))) {
+                Plotly.deleteTraces(this.plotElemId, [t]).then((p) => {
+                    this.signalMap.delete(k)
+                    let idIndex = p.data.map((trace, index) => [trace.meta[0], index])
+                    idIndex.forEach(p => { this.signalMap.set(...p) })
+                })
+            }
+        })
+        this.signalPropertiesMap.forEach((t, k) => {
+            if (!(active.includes(k))) {
+                this.signalPropertiesMap.delete(k)
+            }
+        })
+        let updateColors = [];
+        let updateVisibility = [];
+        signals.forEach(signal => {
+            if (this.signalPropertiesMap.has(signal.id)) {
+                if (signal.color !== this.signalPropertiesMap.get(signal.id).color) {
+                    updateColors.push([signal.color, this.signalMap.get(signal.id)])
+                }
+                if (signal.selected !== this.signalPropertiesMap.get(signal.id).selected) {
+                    updateVisibility.push([signal.selected, this.signalMap.get(signal.id)])
+                } 
+            }
+            this.signalPropertiesMap.set(signal.id, signal);
+        })
+
+        if (updateColors.length > 0) {
+            this.updateTraceColors(updateColors);
+        }
+        if (updateVisibility.length > 0 && this.dimmingEnabled) {
+            this.updateTraceVisibility(updateVisibility);
+        }
+    }
+
+    updateTraceColors(updateList) {
+        //[[color, traceindex], [color, traceindex], ..]
+        let colors = updateList.map(x => x[0]);
+        let indices = updateList.map(x => x[1]);
+        let update = {
+            fillcolor : colors
+        }
+        Plotly.restyle(this.plotElemId, update, indices);
+    }
+
+    updateTraceVisibility(updateList) {
+        //[[VISIBility, traceindex],  ..]
+        let visibility = updateList.map(x => x[0]);
+        let indices = updateList.map(x => x[1]);
+        let update = {
+            visible : visibility
+        }
+        Plotly.restyle(this.plotElemId, update, indices);
     }
 
     updateTraceData(signalupdate) {
@@ -56,10 +120,33 @@ class PlotlyPlot extends Component {
         Plotly.restyle(this.plotElemId, update, [index])
     }
 
+    makeAllVisible() {
+        const plot = document.getElementById(this.plotElemId);
+        const traces = plot.data;
+        const indices = traces.map((trace,index) => index)
+        let visibility = indices.map(x => true)
+        let update = {
+            visible: visibility
+        }
+        Plotly.restyle(this.plotElemId, update, indices)
+    }
+
+    enableDimming() {
+        let plot = document.getElementById(this.plotElemId);
+        let idIndex = plot.data.map((trace, index) => [trace.meta[0], index])
+        let visibility = idIndex.map(i=> this.signalPropertiesMap.get(i[0]).selected)
+        let indices = idIndex.map(i => i[1])
+        let update = {
+            visible: visibility
+        }
+        Plotly.restyle(this.plotElemId, update, indices)
+    }
+
     addTrace(signalupdate) {
         let datapoints = signalupdate.results.data.samples.samples.map(s => s.value)
         let name = signalupdate.signal.name
         let color = signalupdate.signal.color ?? '#8dd3c7'
+        let visible = !(this.dimmingEnabled) || (this.dimmingEnabled && signalupdate.signal.selected)
         let trace = {
             type: 'violin',
             y : datapoints,
