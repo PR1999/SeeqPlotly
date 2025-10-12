@@ -5,7 +5,7 @@ import { PlotlyPlot } from './plot.js';
 
 let seeq;
 let PLOT_AREA_ELEM = 'plotarea'
-let debugmode = true;
+let debugmode = false;
 let MEDIATOR;
 let iconselect = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Pro v5.15.4 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2025 Fonticons, Inc.--><path d="M505 174.8l-39.6-39.6c-9.4-9.4-24.6-9.4-33.9 0L192 374.7 80.6 263.2c-9.4-9.4-24.6-9.4-33.9 0L7 302.9c-9.4 9.4-9.4 24.6 0 34L175 505c9.4 9.4 24.6 9.4 33.9 0l296-296.2c9.4-9.5 9.4-24.7.1-34zm-324.3 106c6.2 6.3 16.4 6.3 22.6 0l208-208.2c6.2-6.3 6.2-16.4 0-22.6L366.1 4.7c-6.2-6.3-16.4-6.3-22.6 0L192 156.2l-55.4-55.5c-6.2-6.3-16.4-6.3-22.6 0L68.7 146c-6.2 6.3-6.2 16.4 0 22.6l112 112.2z"/></svg>`
 
@@ -57,9 +57,6 @@ class seeqPlugin extends Component {
     }
 
     syncSignals(newsignals) {
-        if (newsignals.toString() === this.signals.toString()) {
-            return
-        }
         this.signals = newsignals;
         this.mediator.notify({ type: 'SYNC_SIGNALS', value: this.signals });
         this.signals.forEach(s => {
@@ -138,6 +135,49 @@ class seeqPlugin extends Component {
         this.reloadSignals()
     }
 
+    syncInvestigationRange(e){
+        devlog('sync investigation range');
+        devlog(e);
+    }
+
+    syncCurrentWorkstep(e){
+        devlog('sync workstep');
+        devlog(e);
+
+    }
+
+    syncScalars(e){
+        devlog('sync scalars');
+        devlog(e);
+
+    }
+
+    syncMetrics(e){
+        devlog('sync metrics');
+        devlog(e);
+    }
+
+    syncTables(e){
+        devlog('sync tables');
+        devlog(e);
+
+    }
+
+    syncPluginState(e){
+        devlog('sync plugin state');
+        devlog(e);
+    }
+
+    syncCapsules(e){
+        devlog('sync capsules');
+        devlog(e);
+    }
+    
+    syncSelectedCapsules(e){
+        devlog('sync selected capsules');
+        devlog(e);
+    }
+
     registerSeeq() {
         devlog('Registering Plugin SEEQ API');
         this.seeq = seeq;
@@ -155,8 +195,16 @@ class seeqPlugin extends Component {
     registerToPlugin() {
         devlog('Registering Plugin Handlers ');
         this.seeq.subscribeToDisplayRange(this.init(displayrange => this.syncDisplayRange(displayrange)));
+        this.seeq.subscribeToInvestigationRange(this.init(e => this.syncInvestigationRange(e)));
+        this.seeq.subscribeToCurrentWorkstep(this.init(e => this.syncCurrentWorkstep(e)));
+        this.seeq.subscribeToPluginState(this.init(e => this.syncPluginState(e)));
         this.seeq.subscribeToSignals(this.init(signals => this.syncSignals(signals)));
         this.seeq.subscribeToConditions(this.init(conditions => this.syncConditions(conditions)));
+        this.seeq.subscribeToCapsules(this.init(e => this.syncCapsules(e)));
+        this.seeq.subscribeToSelectedCapsules(this.init(e => this.syncSelectedCapsules(e)));
+        this.seeq.subscribeToMetrics(this.init(e => this.syncMetrics(e)));
+        this.seeq.subscribeToTables(this.init(e => this.syncTables(e)));
+        this.seeq.subscribeToScalars(this.init(e => this.syncScalars(e)));
         Promise.all(this.initPromises).then(() => this.seeq.pluginRenderComplete());
     }
 
