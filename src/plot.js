@@ -9,6 +9,9 @@ class PlotlyPlot extends Component {
     signalMap = new Map();
     signalPropertiesMap = new Map();
     dimmingEnabled = false;
+    showBoxplot = true;
+    pointsDisplayType = false;
+
     constructor(plotElemId, params = {}) {
         super();
         this.plotElemId = plotElemId;
@@ -50,6 +53,13 @@ class PlotlyPlot extends Component {
                     this.enableDimming()
                 }
                 break;
+            case 'BOX_BTN_CLICK':
+                this.showBoxplot = e.value;
+                this.toggleBoxPlot();
+                break;
+            case 'POINTS_SELECT_CHANGE':
+                this.pointsDisplayType = e.value;
+                this.updatePointsDisplayType();
         }
     }
 
@@ -131,6 +141,31 @@ class PlotlyPlot extends Component {
         Plotly.restyle(this.plotElemId, update, indices)
     }
 
+    toggleBoxPlot() {
+        const plot = document.getElementById(this.plotElemId);
+        const traces = plot.data;
+        const indices = traces.map((trace,index) => index)
+        let state = this.showBoxplot
+        let visibility = indices.map(x => state)
+        let update = {
+            box: {
+                visible : state
+            }
+        }
+        Plotly.restyle(this.plotElemId, update, indices)
+    }
+
+    updatePointsDisplayType(){
+        const plot = document.getElementById(this.plotElemId);
+        const traces = plot.data;
+        const indices = traces.map((trace,index) => index)
+        let pointsDisplayTypeUpdate = indices.map(x => this.pointsDisplayType)
+        let update = {
+            points: pointsDisplayTypeUpdate
+        }
+        Plotly.restyle(this.plotElemId, update, indices)
+    }
+
     enableDimming() {
         let plot = document.getElementById(this.plotElemId);
         let idIndex = plot.data.map((trace, index) => [trace.meta[0], index])
@@ -150,9 +185,9 @@ class PlotlyPlot extends Component {
         let trace = {
             type: 'violin',
             y : datapoints,
-            points: 'none',
+            points: this.pointsDisplayType,
             box: {
-                visible: true
+                visible: this.showBoxplot
             },
             boxpoints: false,
             line: {

@@ -1,5 +1,5 @@
 import Plotly from 'plotly.js-dist-min'
-import { Component, Mediator, Button } from './components.js'
+import { Component, Mediator, Button, DropdownSelector } from './components.js'
 import { PlotlyPlot } from './plot.js';
 
 
@@ -29,9 +29,12 @@ document.addEventListener("DOMContentLoaded", function () {
     let plotWidth = width*0.8;
     let plot = new PlotlyPlot(PLOT_AREA_ELEM, {height : plotHeight, width: plotWidth});
     MEDIATOR.register(plot);
-    let dimButton = new Button('dimBtn', 'dimBtn', 'toolbar', 'DIM_BTN_CLICK', 'Dimming', iconselect);
+    let dimButton = new Button('dimBtn', 'dimBtn', 'toolbar', 'DIM_BTN_CLICK', 'Dimming', iconselect,false);
     MEDIATOR.register(dimButton);
-
+    let boxButton = new Button('boxBtn', 'boxBtn', 'toolbar', 'BOX_BTN_CLICK', 'Boxplot', iconselect, true);
+    MEDIATOR.register(boxButton);
+    let pointsDropdown = new DropdownSelector('pointsSelector', 'toolbar', 'pointsSelector', 'POINTS_SELECT_CHANGE', [{text: 'None', value:'none', eventValue:false},{text: 'All', value:'all', eventValue:'all'}, {text: 'Outliers', value:'outliers', eventValue:'outliers'}, {text: 'Suspected outliers', value:'suspectedoutliers', eventValue:'suspectedoutliers'}])
+    MEDIATOR.register(pointsDropdown);
 });
 
 function registerHandlers(plugin) {
@@ -87,7 +90,8 @@ class seeqPlugin extends Component {
         }
         try {
             this.seeq.setTrendDataStatusLoading(signal.id);
-            let results = await this.seeq.runFormula(p)
+            //let results = await this.seeq.runFormula(p)
+            let results = await this.getFormulaData(p);
 
             this.seeq.setTrendDataStatusSuccess({
                 id: signal.id,
@@ -114,11 +118,40 @@ class seeqPlugin extends Component {
     }
 
     async formulaData(params, continuationToken = null) {
+        //Seeq never implemented support for continuation tokens in the plugin api. Leaving it in case they ever do.
         if (continuationToken !== null) {
-            p['continuationToken'] = continuationToken;
+            params['continuationToken'] = continuationToken;
         }
-        let res = await this.seeq.runFormula(p)
+        let res = await this.seeq.runFormula(params)
         return res
+    }
+
+    async getFormulaData(params){
+        let allSamples = []
+        let complete = false
+        let nexttoken = null
+        let lastresult;
+        let originalStart = params.start
+        while((!complete)) {
+            let res = await this.formulaData(params, nexttoken)
+            complete = (res.data.samples.continuationToken === null || res.data.samples.continuationToken === undefined)
+            nexttoken = res.data.samples.continuationToken
+            allSamples.push(...res.data.samples.samples)
+            lastresult = res
+            //this is a workaround! I modify startdate if there is a continuation token, because tokens are not implemented for the plugin api.
+            if (res.data.metadata["Key Unit Of Measure"] == 'ns'){
+                let nextStart = allSamples[allSamples.length - 1].key
+                nextStart = Math.ceil(nextStart / 1000000)
+                let nextStartDate = new Date(nextStart)
+                let nextStartStr = nextStartDate.toISOString()
+                params.start = nextStartStr
+            } else {
+                complete = true;
+                throw new Error(`data exceeded limit of ${params.limit} for ${params.series}`)
+            }
+        }
+        lastresult.data.samples.samples = allSamples;
+        return lastresult;
     }
 
     syncConditions(conditions) {
