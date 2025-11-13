@@ -1,5 +1,16 @@
 import { Component } from "./components";
 
+/**
+ * class for interacting with the seeq web api and other components
+ * @extends Component 
+ * @property {boolean} debugmode
+ * @property {Promise[]} initPromises
+ * @property {object} seeq
+ * @property {object} workbook
+ * @property {object} worksheet
+ * @property {object} displayrange
+ * @property {object[]} signals
+ */
 class seeqPlugin extends Component {
     componentType = 'sqPlugin';
     debugmode =false;
@@ -14,13 +25,13 @@ class seeqPlugin extends Component {
     constructor() {
         super()
     }
-
+    /** dev logs, unless disabled by debugmode */
     devlog(data) {
     if (this.debugmode) {
         console.log(data)
     }
 }
-
+    /** seeq signals event handler */
     syncSignals(newsignals) {
         this.signals = newsignals;
         this.mediator.notify({ type: 'SYNC_SIGNALS', value: this.signals });
@@ -33,7 +44,7 @@ class seeqPlugin extends Component {
             }
         });
     }
-
+    /** loads signal data for current display range*/
     async loadSignal(signal) {
         if (this.displayrange === undefined) {
             return
@@ -71,7 +82,7 @@ class seeqPlugin extends Component {
             this.seeq.catchItemDataFailure(signal.id, `cg${signal.id}`, error.message)
         }
     }
-
+    /** reload all signals */
     reloadSignals() {
         this.signals.forEach(s => {
             this.devlog(`Loading: ${s.name} - ${s.dataStatus} - ${s.lastFetchRequest}`)
@@ -79,6 +90,7 @@ class seeqPlugin extends Component {
         });
     }
 
+    /** runs formula with the specified parameters @param {object} params @param {string} [continuationToken=null] */
     async formulaData(params, continuationToken = null) {
         //Seeq never implemented support for continuation tokens in the plugin api. Leaving it in case they ever do.
         if (continuationToken !== null) {
@@ -87,7 +99,7 @@ class seeqPlugin extends Component {
         let res = await this.seeq.runFormula(params)
         return res
     }
-
+    /** runs a formula with the specified parameters @param {objects} params */
     async getFormulaData(params){
         let allSamples = []
         let complete = false
@@ -121,6 +133,10 @@ class seeqPlugin extends Component {
         this.devlog(conditions);
     }
 
+    /**
+     * handles display range events - sets new display range and calls reload signals
+     * @param {} newdisplayrange 
+     */
     syncDisplayRange(newdisplayrange) {
         this.devlog(newdisplayrange);
         if (this.displayrange === newdisplayrange) {
@@ -173,6 +189,7 @@ class seeqPlugin extends Component {
         this.devlog(e);
     }
 
+    /**registers seeq api object with this plugin object @param {*} seeq */
     registerSeeq(seeq) {
         this.devlog('Registering Plugin SEEQ API');
         this.seeq = seeq;
@@ -180,6 +197,7 @@ class seeqPlugin extends Component {
         this.registerToPlugin();
     }
 
+    /** sets plugin info, workbook, and worksheet */
     registerInfo() {
         this.devlog('Registering Plugin info');
         this.pluginInfo = this.seeq.pluginInfo;
@@ -187,6 +205,7 @@ class seeqPlugin extends Component {
         this.workbook = this.seeq.workbook;
     }
 
+    /**subscribes plugins handlers to seeq events */
     registerToPlugin() {
         this.devlog('Registering Plugin Handlers ');
         this.seeq.subscribeToDisplayRange(this.init(displayrange => this.syncDisplayRange(displayrange)));
@@ -202,7 +221,7 @@ class seeqPlugin extends Component {
         this.seeq.subscribeToScalars(this.init(e => this.syncScalars(e)));
         Promise.all(this.initPromises).then(() => this.seeq.pluginRenderComplete());
     }
-
+    /** wraps function in a promise and pushes to initPromises,  resolves promise once the function has ran @param {function} func*/
     init(func) {
         let resolve;
         this.initPromises.push(new Promise(r => { resolve = r; }));

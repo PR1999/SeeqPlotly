@@ -1,3 +1,8 @@
+/**
+ * registers and keeps track of components
+ * @property {Component[]} components
+ * @property {boolean} logging
+ */
 class Mediator {
 
     components = [];
@@ -6,6 +11,10 @@ class Mediator {
     constructor() {
     }
 
+    /**
+     * registers a component to this mediator.
+     * @param {Component} component 
+     */
     register(component) {
         component.setMediator(this)
         this.components.push(component);
@@ -14,17 +23,29 @@ class Mediator {
         }
     }
 
+    /**
+     * logs event to console, unless log property of event is false or logging is disabled.
+     * @param {mediatorEvent} e 
+     */
     log(e) {
         if (this.logging && e?.log!==false) {
         console.log(`EVENT:\t${e.type}\t${e?.value}`);
         }
     }
 
+    /**
+     * notifies each registered component of an event
+     * @param {mediatorEvent} e 
+     */
     notify(e) {
     this.log(e);
     this.send_event(e);
     }
 
+    /**
+     * calls listen for each of this mediators components
+     * @param {mediatorEvent} e 
+     */
     send_event(e) {
         this.components.forEach(component => {
             component.listen(e);
@@ -32,27 +53,53 @@ class Mediator {
     }
 }
 
+/**
+ * Generic component class
+ * @property {string} componentType
+ */
 class Component {
     componentType = 'Component';
     constructor() {
 
     }
-
+    /**
+     * @param {Mediator} mediator 
+     */
     setMediator(mediator) {
         this.mediator = mediator;
     }
 
+    /**
+     * @param {mediatorEvent} e 
+     */
     listen(e) {
 
     }
 }
 
+/**
+ * class representing html button element @extends Component
+ * @property {string} parentEl - id of parent element 
+ * @property {string} elementId
+ * @property {string} eventIdentifier
+ * @property {boolean} state
+ */
 class Button extends Component {
     componentType = 'Button';
     parentEl;
     elementId;
     eventIdentifier;
     state = false;
+
+    /**
+     * @param {string} name 
+     * @param {string} elementId 
+     * @param {string} parentEl 
+     * @param {string} eventIdentifier 
+     * @param {string} [text=''] 
+     * @param {string} [icon='']
+     * @param {boolean} [initialState=false] 
+     */
     constructor(name, elementId, parentEl, eventIdentifier, text = '', icon='', initialState=false ) {
         super();
         this.name = name;
@@ -71,6 +118,7 @@ class Button extends Component {
         parent.appendChild(btnEl);
     }
 
+    /** Handle button click */
     handle_click(){
         this.state = !(this.state);
         let btnEl = document.getElementById(this.elementId);
@@ -88,6 +136,7 @@ class Button extends Component {
     }
 }
 
+/** Represents dropdown element @extends Component */
 class DropdownSelector extends Component{
     componentType = 'DropdownSelector';
     /**
@@ -115,7 +164,10 @@ class DropdownSelector extends Component{
         let parent = document.getElementById(parentEl);
         parent.appendChild(selectEl);
     }
-
+    /**
+     * handles change events
+     * @param {Event} e 
+     */
     handle_select_change(e) {
         let selectedValue = e.currentTarget.value
         
@@ -126,7 +178,12 @@ class DropdownSelector extends Component{
 
         this.mediator.notify(myevent);
     }
-
+    /**Update dropdown with new calues and data 
+     * @param {object[]} data 
+     * @prop {string} data.text - display text
+     * @prop {string} data.value - unique identifier for HTML and event identifier
+     * @prop {any} data.eventValue - to send with event 
+     */
     update_data(data) {
         let textlist = data.map(opt => opt.text);
         let valuesList = data.map(opt => opt.value);
@@ -138,6 +195,14 @@ class DropdownSelector extends Component{
         parent.replaceChild(selectEl, old);
     }
 
+/**
+ * Creates select element
+ * @param {string[]} list - list of display text
+ * @param {string} name - select element name
+ * @param {string} id - element id
+ * @param {string} values - html event value
+ * @returns {HTMLSelectElement}
+ */
     createSelectElement(list, name, id, values = []) {
         let selectElem = document.createElement('select');
         selectElem.setAttribute('name', name);

@@ -1,6 +1,16 @@
 import { Component } from "./components";
 import Plotly from 'plotly.js-dist-min';
 
+/** Violin Plot Class @extends Component 
+ * @property {string} plotElemId - id of html element containing the plot
+ * @property {number} plotWidth - width of plot, default 600px
+ * @property {number} plotHeight - heigth of plot, default 400px
+ * @property {map} signalMap - map of signals with the signal id as key and trace index as value
+ * @property {map} signalPropertiesMap - map of signal id's with signal properties. 
+ * @property {boolean} dimmingEnabled - enable / disable dimming functionality
+ * @property {boolean} showBoxplot - show / hide boxplot on violintraces
+ * @property {string | boolean} pointsDisplayType - points display type (false | all | outliers | suspectedoutliers)
+*/
 class PlotlyPlot extends Component {
     componentType = 'plotlyPlot'
     plotElemId;
@@ -12,6 +22,11 @@ class PlotlyPlot extends Component {
     showBoxplot = true;
     pointsDisplayType = false;
 
+    /**
+     * Constructor for plot
+     * @param {string} plotElemId - id of html element containing the plot
+     * @param {object} params @prop {number} [params.width=600] @prop {number} [params.height=400]
+     */
     constructor(plotElemId, params = {}) {
         super();
         this.plotElemId = plotElemId;
@@ -20,6 +35,7 @@ class PlotlyPlot extends Component {
         this.initPlotlyPlot()
     }
 
+    /**Initializes new plotly plot */
     initPlotlyPlot() {
         let data = [];
         let layout = {
@@ -62,7 +78,10 @@ class PlotlyPlot extends Component {
                 this.updatePointsDisplayType();
         }
     }
-
+    /**
+     * updates signals on plot
+     * @param {object[]} signals 
+     */
     syncSignals(signals) {
         let active = signals.map(s => s.id);
         this.signalMap.forEach((t, k) => {
@@ -100,7 +119,7 @@ class PlotlyPlot extends Component {
             this.updateTraceVisibility(updateVisibility);
         }
     }
-
+    /**Updates trace colors @param {array[string[]]} updateList - update info : [[color, traceindex], [color, traceindex], ..] */
     updateTraceColors(updateList) {
         //[[color, traceindex], [color, traceindex], ..]
         let colors = updateList.map(x => x[0]);
@@ -110,7 +129,10 @@ class PlotlyPlot extends Component {
         }
         Plotly.restyle(this.plotElemId, update, indices);
     }
-
+    /**
+     * updates traces visibility
+     * @param {array[]} updateList - update info: [[visibility, traceindex]]
+     */
     updateTraceVisibility(updateList) {
         //[[VISIBility, traceindex],  ..]
         let visibility = updateList.map(x => x[0]);
@@ -121,6 +143,9 @@ class PlotlyPlot extends Component {
         Plotly.restyle(this.plotElemId, update, indices);
     }
 
+    /**Updates traces data 
+     * @param {*} signalupdate 
+     */
     updateTraceData(signalupdate) {
         let datapoints = signalupdate.results.data.samples.samples.map(s => s.value)
         let update = {
@@ -130,6 +155,7 @@ class PlotlyPlot extends Component {
         Plotly.restyle(this.plotElemId, update, [index])
     }
 
+    /** Makes all traces visible */
     makeAllVisible() {
         const plot = document.getElementById(this.plotElemId);
         const traces = plot.data;
@@ -141,6 +167,7 @@ class PlotlyPlot extends Component {
         Plotly.restyle(this.plotElemId, update, indices)
     }
 
+    /** show / hide boxplots */
     toggleBoxPlot() {
         const plot = document.getElementById(this.plotElemId);
         const traces = plot.data;
@@ -154,7 +181,7 @@ class PlotlyPlot extends Component {
         }
         Plotly.restyle(this.plotElemId, update, indices)
     }
-
+    /** updates points display type */
     updatePointsDisplayType(){
         const plot = document.getElementById(this.plotElemId);
         const traces = plot.data;
@@ -165,7 +192,7 @@ class PlotlyPlot extends Component {
         }
         Plotly.restyle(this.plotElemId, update, indices)
     }
-
+    /** enable / disable dimming */
     enableDimming() {
         let plot = document.getElementById(this.plotElemId);
         let idIndex = plot.data.map((trace, index) => [trace.meta[0], index])
@@ -177,6 +204,7 @@ class PlotlyPlot extends Component {
         Plotly.restyle(this.plotElemId, update, indices)
     }
 
+    /** adds trace @param {*} signalupdate  */
     addTrace(signalupdate) {
         let datapoints = signalupdate.results.data.samples.samples.map(s => s.value)
         let name = signalupdate.signal.name
@@ -208,7 +236,7 @@ class PlotlyPlot extends Component {
         })
 
     }
-
+    /** deletes all traces from plot */
     clearPlot() {
         const plot = document.getElementById(this.plotElemId);
         const traces = plot.data;

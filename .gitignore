@@ -4,3 +4,5 @@ node_modules
 test.js
 Seeq Test PR-0.0.1.plugin
 OLD
+out
+Plotly Plots-0.0.3.plugin

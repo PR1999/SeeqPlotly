@@ -1,5 +1,5 @@
 import Plotly from 'plotly.js-dist-min'
-import { Component, Mediator, Button, DropdownSelector } from './components.js'
+import { Component, Mediator, Button, DropdownSelector } from './components.js' 
 import { PlotlyPlot } from './plot.js';
 import { seeqPlugin } from './seeqplugin.js';
 
